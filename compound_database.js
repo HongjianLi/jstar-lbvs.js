@@ -80,7 +80,7 @@ class compound_database {
 		const position = index ? this['conformers.sdf.ftr'][index - 1] : 0n;
 		const length = parseInt(this['conformers.sdf.ftr'][index] - position);
 		const buffer = Buffer.alloc(length);
-		const { bytesRead } = await readPromisied(this['conformers.sdf'].fd, { buffer, position }); // fs.read(fd[, options], callback) supports position <bigint>.
+		const { bytesRead } = await readPromisied(this['conformers.sdf'].fd, { buffer, position }); // fs.read(fd[, options], callback) supports position <bigint>. https://nodejs.org/api/fs.html#fsreadfd-options-callback
 		console.assert(bytesRead === length);
 		return buffer.toString();
 	}
