@@ -116,6 +116,7 @@ const SubsetMols = SubsetSMARTS.map(smarts => rdkit.get_qmol(smarts));
  * @type {Array<compound_database>}
  */
 const databases = await fs.readdir(options.cpdbs_path).then(subDirs => subDirs.map(subDir => new compound_database(path.join(options.cpdbs_path, subDir))));
+for (let k = 0; k < databases.length; ++k) { await databases[k].read_descriptors(); }
 
 // Connect to mongodb and authenticate user.
 console.log(`Connecting to ${options.host}:${options.port} and authenticating ${options.user}`);
