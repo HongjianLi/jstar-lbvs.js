@@ -6,6 +6,7 @@ import { MongoClient } from "mongodb";
 import initRDKitModule from '@rdkit/rdkit';
 import { Piscina } from 'piscina';
 import { compound_database } from './compound_database.js';
+import local_time_string from './utility.js';
 
 /**
  * Calculate the square distance between two points.
@@ -86,7 +87,7 @@ const options = program
 	.opts();
 
 // Initialize constants.
-console.log('Initializing');
+console.log(`${local_time_string()} Initializing`);
 const num_usrs = 2;
 const usr_names = [ "USR", "USRCAT" ];
 const qn = [ 12, 60 ];
@@ -119,7 +120,7 @@ const databases = await fs.readdir(options.cpdbs_path).then(subDirs => subDirs.m
 for (let k = 0; k < databases.length; ++k) { await databases[k].read_descriptors(); }
 
 // Connect to mongodb and authenticate user.
-console.log(`Connecting to ${options.host}:${options.port} and authenticating ${options.user}`);
+console.log(`${local_time_string()} Connecting to ${options.host}:${options.port} and authenticating ${options.user}`);
 const mongoClient = new MongoClient(`mongodb://${options.host}:${options.port}/?authSource=jstar&maxPoolSize=3`); // https://www.mongodb.com/docs/drivers/node/current/fundamentals/connection/ Always URI encode the username and password using the encodeURIComponent method to ensure they are correctly parsed.
 await mongoClient.connect();
 const jstar = mongoClient.db('jstar');
@@ -166,16 +167,16 @@ const piscina = new Piscina({
 });
 
 // Enter event loop.
-console.log(`Entering event loop`);
+console.log(`${local_time_string()} Entering event loop`);
 let sleeping = false;
 while (true) {
 	// Fetch an incompleted job in a first-come-first-served manner.
-	if (!sleeping) console.log(`Fetching an incompleted job`);
+	if (!sleeping) console.log(`${local_time_string()} Fetching an incompleted job`);
 	const startDate = new Date();
 	const jobid_document = await coll.findOneAndUpdate(jobid_filter, { $set: { startDate } }, jobid_foau_options); // https://mongodb.github.io/node-mongodb-native/4.5/classes/Collection.html#findOneAndUpdate
 	if (!jobid_document.value) {
 		// No incompleted jobs. Sleep for a while.
-		if (!sleeping) console.log(`Sleeping`);
+		if (!sleeping) console.log(`${local_time_string()} Sleeping`);
 		sleeping = true;
 		await new Promise(resolve => setTimeout(resolve, 2000));
 		continue;
@@ -185,7 +186,7 @@ while (true) {
 
 	// Obtain job properties.
 	const _id = jobid_view["_id"];
-	console.log(`Executing job ${_id}`);
+	console.log(`${local_time_string()} Executing job ${_id}`);
 	const qry_mol_sdf = jobid_view["qryMolSdf"];
 	const cpdb_name = jobid_view["database"];
 	const score = jobid_view["score"];
@@ -196,11 +197,11 @@ while (true) {
 	const qnu1 = qn[usr1];
 
 	// Obtain a constant reference to the selected database.
-	console.log(`Finding the selected compound database`);
+	console.log(`${local_time_string()} Finding the selected compound database`);
 	const cpdb = databases.find(cpdb => cpdb.name === cpdb_name);
 
 	// Read the user-supplied SDF file.
-	console.log(`Reading the query file`);
+	console.log(`${local_time_string()} Reading the query file`);
 
 	// Initialize vectors to store compounds' primary score and their corresponding conformer.
 	/**
@@ -221,7 +222,7 @@ while (true) {
 	const num_chunks = 1 + Math.floor((cpdb.num_compounds - 1) / chunk_size);
 	console.assert(chunk_size * num_chunks >= cpdb.num_compounds);
 	console.assert(chunk_size >= num_hits);
-	console.log(`Using ${num_chunks} chunks and a chunk size of ${chunk_size}`);
+	console.log(`${local_time_string()} Using ${num_chunks} chunks and a chunk size of ${chunk_size}`);
 	/**
 	 * The last chunk might have fewer than num_hits records.
 	 * vector<size_t> zcase(num_hits * (num_chunks - 1) + Math.min(num_hits, cpdb.num_compounds - chunk_size * (num_chunks - 1)));
@@ -233,7 +234,7 @@ while (true) {
 	const num_qry_mols = 1; // num_qry_mols is the number of query molecules submitted by the user. These query molecules are not necessarily all processed, given the limitation of maximum 16MB MongoDB document size of the result.
 	let query_number = 0;
 	while (query_number < num_qry_mols) {
-		console.log(`Parsing query compound ${query_number}`);
+		console.log(`${local_time_string()} Parsing query compound ${query_number}`);
 		const qryMol = rdkit.get_mol(qry_mol_sdf);
 		const qryCnf = JSON.parse(qryMol.get_json()).molecules[0].conformers[0].coords;
 		const qryDes = JSON.parse(qryMol.get_descriptors());
@@ -243,17 +244,17 @@ while (true) {
 		const num_heavy_atoms = qryDes.NumHeavyAtoms;
 		console.assert(num_atoms === qryCnf.length);
 		console.assert(num_heavy_atoms);
-		console.log(`Found ${num_atoms} atoms and ${num_heavy_atoms} heavy atoms`);
+		console.log(`${local_time_string()} Found ${num_atoms} atoms and ${num_heavy_atoms} heavy atoms`);
 
 		// Calculate Morgan fingerprint.
-		console.log(`Calculating Morgan fingerprint`);
+		console.log(`${local_time_string()} Calculating Morgan fingerprint`);
 		/**
 		 * const unique_ptr<SparseIntVect<uint32_t>> qryFp(getFingerprint(qryMol, 2));
 		 */
 		const qryFp = qryMol.get_morgan_fp();
 
 		// Classify atoms to pharmacophoric subsets.
-		console.log(`Classifying atoms into subsets`);
+		console.log(`${local_time_string()} Classifying atoms into subsets`);
 		for (let k = 0; k < num_subsets; ++k) {
 			/**
 			 * vector<vector<pair<int, int>>> matchVect;
@@ -262,17 +263,17 @@ while (true) {
 			 */
 			const matchVect = JSON.parse(qryMol.get_substruct_matches(SubsetMols[k]));
 			subsets[k] = matchVect.map(m => m.atoms[0]);
-			console.log(`Found ${matchVect.length} atoms for subset ${k}`);
+			console.log(`${local_time_string()} Found ${matchVect.length} atoms for subset ${k}`);
 		}
 		const subset0 = subsets[0];
 		console.assert(subset0.length == num_heavy_atoms);
 
 		// Calculate the four reference points.
-		console.log(`Calculating ${num_refPoints} reference points`);
+		console.log(`${local_time_string()} Calculating ${num_refPoints} reference points`);
 		const qryRefPoints = calcRefPoints(qryCnf, qryDes, subset0);
 
 		// Precalculate the distances of heavy atoms to the reference points, given that subsets[1 to 4] are subsets of subsets[0].
-		console.log(`Calculating ${num_heavy_atoms * num_refPoints} pairwise distances`);
+		console.log(`${local_time_string()} Calculating ${num_heavy_atoms * num_refPoints} pairwise distances`);
 		for (let k = 0; k < num_refPoints; ++k) {
 			const refPoint = qryRefPoints[k];
 			const distp = dista[k] = Array(num_atoms);
@@ -282,7 +283,7 @@ while (true) {
 		}
 
 		// Loop over pharmacophoric subsets and reference points.
-		console.log(`Calculating ${3 * num_refPoints * num_subsets} moments of USRCAT feature`);
+		console.log(`${local_time_string()} Calculating ${3 * num_refPoints * num_subsets} moments of USRCAT feature`);
 		let qo = 0;
 		for (const subset of subsets) {
 			const n = subset.length;
@@ -327,20 +328,20 @@ while (true) {
 		console.assert(qo == qn[1]);
 
 		// Compute USR and USRCAT scores.
-		console.log(`Screening ${cpdb.name} and calculating ${cpdb.num_compounds} ${usr_names[usr0]} scores from ${cpdb.num_conformers} conformers`);
+		console.log(`${local_time_string()} Screening ${cpdb.name} and calculating ${cpdb.num_compounds} ${usr_names[usr0]} scores from ${cpdb.num_conformers} conformers`);
 		scores.fill(Infinity);
 		await Promise.all([...Array(num_chunks).keys()].map(l => {
 			return piscina.run({ chunk_size, l, num_compounds: cpdb.num_compounds, scores, usrcat: cpdb.usrcat, qnu0, q, cnfids, zcase, num_hits }, { name: 'calculate' });
 		}));
 
 		// Sort the top hits from chunks.
-		console.log(`Sorting ${zcase.length} hits by ${usr_names[usr0]} score`);
+		console.log(`${local_time_string()} Sorting ${zcase.length} hits by ${usr_names[usr0]} score`);
 		zcase.sort((val0, val1) => {
 			return scores[val0] - scores[val1];
 		});
 
 		// Write hit molecules to a string stream for output.
-		console.log(`Writing hit molecules to a string stream`);
+		console.log(`${local_time_string()} Writing hit molecules to a string stream`);
 		let hitMolSdfPerQry = '';
 		for (let l = 0; l < num_hits; ++l) {
 			// Obtain indexes to the hit compound and the hit conformer.
@@ -411,23 +412,23 @@ while (true) {
 			// Write the aligned hit conformer.
 			hitMolSdfPerQry += hitMol.get_molblock() + '$$$$\n'; // .get_molblock() does not return the trailing $$$$ line.
 		}
-		console.log(`Wrote ${hitMolSdfPerQry.length} bytes of hit molecules to a string stream`);
+		console.log(`${local_time_string()} Wrote ${hitMolSdfPerQry.length} bytes of hit molecules to a string stream`);
 
 		// If the size of the hitMolSdf field will not exceed 15MB after appending, then allow the appending. Reserve 1MB for the other fields, e.g. qryMolSdf.
 		if (hitMolSdf.length + hitMolSdfPerQry.length < 15000000) {
 			hitMolSdf += hitMolSdfPerQry;
-			console.log(`Accumulated ${hitMolSdf.length} bytes of hit molecules for the first ${++query_number} query molecules`);
+			console.log(`${local_time_string()} Accumulated ${hitMolSdf.length} bytes of hit molecules for the first ${++query_number} query molecules`);
 		} else {
-			console.log(`Unable to accumulate ${hitMolSdfPerQry.length} bytes to the existing ${hitMolSdf.length} bytes`);
+			console.log(`${local_time_string()} Unable to accumulate ${hitMolSdfPerQry.length} bytes to the existing ${hitMolSdf.length} bytes`);
 			break;
 		}
 	}
 	const num_qry_mols_processed = query_number; // num_qry_mols_processed is the number of query molecules processed by the daemon.
 	console.assert(num_qry_mols_processed <= num_qry_mols);
-	console.log(`Processed ${num_qry_mols_processed} out of ${num_qry_mols} query molecules`);
+	console.log(`${local_time_string()} Processed ${num_qry_mols_processed} out of ${num_qry_mols} query molecules`);
 
 	// Update job status.
-	console.log(`Writing ${hitMolSdf.length} bytes of hit molecules and setting end date`);
+	console.log(`${local_time_string()} Writing ${hitMolSdf.length} bytes of hit molecules and setting end date`);
 	const endDate = new Date();
 	const compt_update = await coll.updateOne({ _id }, {
 		$set: {
@@ -445,7 +446,7 @@ while (true) {
 	// Calculate runtime in seconds and screening speed in conformers per second.
 	const runtime = (endDate.getTime() - startDate.getTime()) * 1e-3; // Convert milliseconds to seconds.
 	const speed = cpdb.num_conformers * num_qry_mols_processed / runtime;
-	console.log(`Completed ${num_qry_mols_processed} ${num_qry_mols_processed == 1 ? "query" : "queries"} in ${runtime.toFixed(3)} seconds`);
-	console.log(`Screening speed was ${speed.toFixed(0)} conformers per second`);
+	console.log(`${local_time_string()} Completed ${num_qry_mols_processed} ${num_qry_mols_processed == 1 ? "query" : "queries"} in ${runtime.toFixed(3)} seconds`);
+	console.log(`${local_time_string()} Screening speed was ${speed.toFixed(0)} conformers per second`);
 }
 await mongoClient.close();
