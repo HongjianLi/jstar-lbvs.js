@@ -1,5 +1,6 @@
 # jstar-lbvs.js
 [jstar]'s daemon for ligand-based virtual screening (LBVS), written in JavaScript.
+A C++ implementation is available at [https://github.com/HongjianLi/jstar-lbvs.cpp]
 
 ## Architecture
 ![jstar architecture](https://github.com/HongjianLi/jstar/blob/master/public/architecture.png)
