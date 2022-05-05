@@ -1,5 +1,6 @@
 import path from 'path';
-import { readSync, promises as fs } from 'fs';
+import util from 'util';
+import { read, promises as fs } from 'fs';
 import local_time_string from './utility.js';
 
 /**
@@ -75,14 +76,16 @@ class compound_database {
 	 * string compound_database::read_conformer(const size_t index, ifstream& ifs) const
 	 * @param {*} index 
 	 */
-	read_conformer(index) {
+	async read_conformer(index) {
 		const position = index ? this['conformers.sdf.ftr'][index - 1] : 0n;
 		const length = parseInt(this['conformers.sdf.ftr'][index] - position);
 		const buffer = Buffer.alloc(length);
-		const bytesRead = readSync(this['conformers.sdf'].fd, buffer, { position }); // fs.readSync(fd, buffer[, options]) supports position <bigint>.
+		const { bytesRead } = await readPromisied(this['conformers.sdf'].fd, { buffer, position }); // fs.read(fd[, options], callback) supports position <bigint>.
 		console.assert(bytesRead === length);
 		return buffer.toString();
 	}
 }
+
+const readPromisied = util.promisify(read);
 
 export { compound_database };

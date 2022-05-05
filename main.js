@@ -358,7 +358,7 @@ while (true) {
 			const u1score = 1 / (1 + s * qv[usr1]); // Secondary score of the current compound.
 
 			// Read SDF content of the hit conformer.
-			const hitMolBlock = cpdb.read_conformer(j);
+			const hitMolBlock = await cpdb.read_conformer(j);
 
 			// Construct a RDKit ROMol object.
 			const hitMol = rdkit.get_mol(hitMolBlock);
