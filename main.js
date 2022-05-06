@@ -24,13 +24,11 @@ function dist2(p0, p1) {
 /**
  * Calculate four reference points of a molecule.
  * @param {Array<Array<number>>} cnf - Conformer.
- * @param {object} des - Descriptors.
  * @param {Array<number>} heavyAtoms - Indexes of heavy atoms.
  * @returns {Array<Array<number>>} - Four reference points.
  */
-function calcRefPoints(conf, des, heavyAtoms) {
+function calcRefPoints(conf, heavyAtoms) {
 	const num_points = heavyAtoms.length;
-	console.assert(num_points == des.NumHeavyAtoms);
 	let ctd = Array(3).fill(0);
 	let cst = Array(3).fill(0);
 	let fct = Array(3).fill(0);
@@ -256,7 +254,7 @@ while (true) {
 
 		// Calculate the four reference points.
 		console.log(`${local_time_string()} Calculating ${num_refPoints} reference points`);
-		const qryRefPoints = calcRefPoints(qryCnf, qryDes, subset0);
+		const qryRefPoints = calcRefPoints(qryCnf, subset0);
 
 		// Precalculate the distances of heavy atoms to the reference points, given that subsets[1 to 4] are subsets of subsets[0].
 		console.log(`${local_time_string()} Calculating ${num_heavy_atoms * num_refPoints} pairwise distances`);
@@ -386,7 +384,7 @@ while (true) {
 //			}
 
 			// Calculate the four reference points.
-			const hitRefPoints = calcRefPoints(hitCnf, hitDes, hitHeavyAtoms);
+			const hitRefPoints = calcRefPoints(hitCnf, hitHeavyAtoms);
 
 			// Calculate a 3D transform from the four reference points of the hit conformer to those of the query compound.
 //			Transform3D trans;
