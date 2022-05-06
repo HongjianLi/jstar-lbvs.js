@@ -77,7 +77,7 @@ const options = program
 	.name('jstar/lbvs')
 	.description("jstar's daemon implementation of ligand-based virtual screening")
 	.version('1.0.0')
-	.option('--cpdbs_path <string>', 'Path to the compound database directory', '../jstar/databases')
+	.option('--databases <string>', 'Path to the compound database directory', '../jstar/databases')
 	.option('--host <string>', 'DBMS host', 'localhost')
 	.option('--port <number>', 'DBMS port', cur => parseInt(cur), 27017)
 	.option('--user <string>', 'DBMS user', 'jstard')
@@ -116,7 +116,7 @@ const SubsetMols = SubsetSMARTS.map(smarts => rdkit.get_qmol(smarts));
  * vector<compound_database>
  * @type {Array<compound_database>}
  */
-const databases = await fs.readdir(options.cpdbs_path).then(subDirs => subDirs.map(subDir => new compound_database(path.join(options.cpdbs_path, subDir))));
+const databases = await fs.readdir(options.databases).then(subDirs => subDirs.map(subDir => new compound_database(path.join(options.databases, subDir))));
 for (let k = 0; k < databases.length; ++k) { await databases[k].read_descriptors(); }
 
 // Connect to mongodb and authenticate user.
