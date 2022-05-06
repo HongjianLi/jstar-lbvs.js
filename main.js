@@ -77,11 +77,11 @@ const options = program
 	.name('jstar-lbvs.js')
 	.description("jstar's daemon for ligand-based virtual screening (LBVS), written in JavaScript.")
 	.version('1.0.0')
+	.option('--databases <string>', 'Path to the compound database directory', '../jstar/databases')
 	.option('--host <string>', 'DBMS host', 'localhost')
 	.option('--port <number>', 'DBMS port', cur => parseInt(cur), 27017)
 	.option('--user <string>', 'DBMS user', 'jstard')
 	.option('--pass <string>', 'DBMS password')
-	.option('--databases <string>', 'Path to the compound database directory', '../jstar/databases')
 	.option('--threads <number>', 'number of worker threads to use', cur => parseInt(cur), os.cpus().length)
 	.parse()
 	.opts();
