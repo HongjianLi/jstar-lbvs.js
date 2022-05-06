@@ -224,7 +224,7 @@ while (true) {
 	let query_number = 0;
 	while (query_number < num_qry_mols) {
 		console.log(`${local_time_string()} Parsing query compound ${query_number}`);
-		const qryMol = rdkit.get_mol(qry_mol_sdf);
+		const qryMol = rdkit.get_mol(qry_mol_sdf); // get_mol has a different implementation from C++ SDMolSupplier(sanitize=true, removeHs=true, strictParsing=true). So the Mol object returned by get_mol is not totally identical to the ROMol instance returned by SDMolSupplier.next(), thus they do not return identical Morgan fingerprints. https://github.com/rdkit/rdkit/blob/master/Code/MinimalLib/common.h#L89
 		const qryCnf = JSON.parse(qryMol.get_json()).molecules[0].conformers[0].coords;
 		const qryDes = JSON.parse(qryMol.get_descriptors());
 
@@ -237,10 +237,7 @@ while (true) {
 
 		// Calculate Morgan fingerprint.
 		console.log(`${local_time_string()} Calculating Morgan fingerprint`);
-		/**
-		 * const unique_ptr<SparseIntVect<uint32_t>> qryFp(getFingerprint(qryMol, 2));
-		 */
-		const qryFp = qryMol.get_morgan_fp();
+		const qryFp = qryMol.get_morgan_fp(2, 2048); // https://github.com/rdkit/rdkit/blob/master/Code/MinimalLib/minilib.cpp#L148
 
 		// Classify atoms to pharmacophoric subsets.
 		console.log(`${local_time_string()} Classifying atoms into subsets`);
@@ -350,10 +347,19 @@ while (true) {
 			const hitDes = JSON.parse(hitMol.get_descriptors());
 
 			// Calculate Morgan fingerprint.
-			const hitFp = hitMol.get_morgan_fp();
+			const hitFp = hitMol.get_morgan_fp(2, 2048);
+			console.assert(hitFp.length === qryFp.length);
 
 			// Calculate Tanimoto similarity.
-//			const ts = TanimotoSimilarity(qryFp, hitFp);
+			let qryFpNumOnBits = 0, hitFpNumOnBits = 0, bothFpNumOnBits = 0; // https://www.rdkit.org/docs/cppapi/BitOps_8h.html#aee73e04c05be3284829cfe7b16beb72f
+			for (let i = 0; i < qryFp.length; ++i) {
+				const qryFpOnBit = qryFp[i] === '1';
+				const hitFpOnBit = hitFp[i] === '1';
+				qryFpNumOnBits += (qryFpOnBit);
+				hitFpNumOnBits += (hitFpOnBit);
+				bothFpNumOnBits += (qryFpOnBit && hitFpOnBit);
+			}
+			const ts = bothFpNumOnBits / (qryFpNumOnBits + hitFpNumOnBits - bothFpNumOnBits);
 
 			// Remove hydrogens to calculate canonical SMILES and descriptors.
 			const hitMolNoH = hitMol.remove_hs();
