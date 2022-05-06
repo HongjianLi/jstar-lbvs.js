@@ -9,10 +9,10 @@ export function calculate({ chunk_size, l, num_compounds, scores, usrcat, qnu0, 
 	for (let k = chunk_beg; k < chunk_end; ++k) {
 		// Loop over conformers of the current compound and calculate their primary score.
 		for (let j = k << 2; j < ((k + 1) << 2); ++j) {
-			const d = usrcat.slice(60 * j, 60 * (j + 1));
+			const o = 60 * j; // offset to usrcat
 			let s = 0;
 			for (let i = 0; i < qnu0; ++i) {
-				s += Math.abs(q[i] - d[i]);
+				s += Math.abs(q[i] - usrcat[o + i]);
 				if (s >= scores[k]) break;
 			}
 			if (s < scores[k]) {
