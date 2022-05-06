@@ -7,27 +7,24 @@ import local_time_string from './utility.js';
  * Represents a compound database.
  */
 class compound_database {
+	/**
+	 * @returns {Array<string>} Descriptor files.
+	 */
 	static get descriptors() {
 		return ['natm.u16', 'nhbd.u16', 'nhba.u16', 'nrtb.u16', 'nrng.u16', 'xmwt.f32', 'tpsa.f32', 'clgp.f32', 'usrcat.f32', 'conformers.sdf.ftr.u64'];
 	}
+
 	/**
-	 * compound_database::compound_database(const path dpth)
 	 * @param {string} dpth - Path to the compound database directory.
 	 */
 	constructor(dpth) {
-		/**
-		 * Path to the compound database directory.
-		 * @type {string}
-		 */
 		this.dpth = dpth;
-
-		/**
-		 * Database name.
-		 * @type {string}
-		 */
 		this.name = path.basename(dpth);
 	}
 
+	/**
+	 * Read descriptor files.
+	 */
 	async read_descriptors() {
 		console.log(`${local_time_string()} Reading ${this.name}`);
 
@@ -64,8 +61,8 @@ class compound_database {
 
 	/**
 	 * Read the ith conformer out of conformers.sdf
-	 * string compound_database::read_conformer(const size_t index, ifstream& ifs) const
 	 * @param {number} index - Index of the conformer to read.
+	 * @returns {string} Conformer string.
 	 */
 	async read_conformer(index) {
 		const position = index ? this['conformers.sdf.ftr.u64'][index - 1] : 0n;
@@ -77,6 +74,6 @@ class compound_database {
 	}
 }
 
-const readPromisied = util.promisify(read);
+const readPromisied = util.promisify(read); // Convert the callback style of fs.read to the promise style.
 
 export { compound_database };

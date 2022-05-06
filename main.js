@@ -10,11 +10,9 @@ import local_time_string from './utility.js';
 
 /**
  * Calculate the square distance between two points.
- * template<typename T>
- * auto dist2(const T& p0, const T& p1)
- * @param {*} p0 
- * @param {*} p1 
- * @returns 
+ * @param {Array<number>} p0 
+ * @param {Array<number>} p1 
+ * @returns {number} Square distance.
  */
 function dist2(p0, p1) {
 	const d0 = p0[0] - p1[0];
@@ -25,10 +23,10 @@ function dist2(p0, p1) {
 
 /**
  * Calculate four reference points of a molecule.
- * array<Point3D, 4> calcRefPoints(const ROMol& mol, const vector<int>& heavyAtoms)
- * @param {*} cnf - Conformer.
- * @param {*} des - Descriptors.
- * @param {*} heavyAtoms 
+ * @param {Array<Array<number>>} cnf - Conformer.
+ * @param {object} des - Descriptors.
+ * @param {Array<number>} heavyAtoms - Indexes of heavy atoms.
+ * @returns {Array<Array<number>>} - Four reference points.
  */
 function calcRefPoints(conf, des, heavyAtoms) {
 	const num_points = heavyAtoms.length;
@@ -103,19 +101,11 @@ const SubsetSMARTS = [
 const num_subsets = SubsetSMARTS.length;
 const num_hits = 100;
 
-// Wrap SMARTS strings to RWMol objects.
+// Wrap SMARTS strings to Mol objects.
 const rdkit = await initRDKitModule();
-/**
- * array<unique_ptr<ROMol>, num_subsets>
- * @type {Array<Mol>}
- */
 const SubsetMols = SubsetSMARTS.map(smarts => rdkit.get_qmol(smarts));
 
 // Read compound database directory.
-/**
- * vector<compound_database>
- * @type {Array<compound_database>}
- */
 const databases = await fs.readdir(options.databases).then(subDirs => subDirs.map(subDir => new compound_database(path.join(options.databases, subDir))));
 for (let k = 0; k < databases.length; ++k) { await databases[k].read_descriptors(); }
 
@@ -257,12 +247,7 @@ while (true) {
 		// Classify atoms to pharmacophoric subsets.
 		console.log(`${local_time_string()} Classifying atoms into subsets`);
 		for (let k = 0; k < num_subsets; ++k) {
-			/**
-			 * vector<vector<pair<int, int>>> matchVect;
-			 * SubstructMatch(qryMol, *SubsetMols[k], matchVect);
-			 * get_substruct_matches returns a string, e.g. [{"atoms":[0],"bonds":[]},{"atoms":[1],"bonds":[]}]
-			 */
-			const matchVect = JSON.parse(qryMol.get_substruct_matches(SubsetMols[k]));
+			const matchVect = JSON.parse(qryMol.get_substruct_matches(SubsetMols[k])); // get_substruct_matches returns a string, e.g. [{"atoms":[0],"bonds":[]},{"atoms":[1],"bonds":[]}]
 			subsets[k] = matchVect.map(m => m.atoms[0]);
 			console.log(`${local_time_string()} Found ${matchVect.length} atoms for subset ${k}`);
 		}
@@ -383,14 +368,14 @@ while (true) {
 			hitMol.setProp<string>("database", cpdb.name);
 			hitMol.setProp<string>("canonicalSMILES", MolToSmiles(hitMolNoH)); // Default parameters are: const ROMol& mol, bool doIsomericSmiles = true, bool doKekule = false, int rootedAtAtom = -1, bool canonical = true, bool allBondsExplicit = false, bool allHsExplicit = false, bool doRandom = false. https://www.rdkit.org/docs/cppapi/namespaceRDKit.html#a3636828cca83a233d7816f3652a9eb6b
 			hitMol.setProp<string>("molFormula", calcMolFormula(hitMol)); // Calculate hydrogens in the molecular formula.
-			hitMol.setProp<unsigned int>("numAtoms", cpdb.natm[k]);
-			hitMol.setProp<unsigned int>("numHBD", cpdb.nhbd[k]);
-			hitMol.setProp<unsigned int>("numHBA", cpdb.nhba[k]);
-			hitMol.setProp<unsigned int>("numRotatableBonds", cpdb.nrtb[k]); // cpdb.nrtb[k] was precalculated from SMILES before adding hydrogens. Adding hydrogens may lead to more rotatable bonds. As a result, cpdb.nrtb[k] == calcNumRotatableBonds(hitMolNoH) <= calcNumRotatableBonds(hitMol)
-			hitMol.setProp<unsigned int>("numRings", cpdb.nrng[k]);
-			hitMol.setProp<double>("exactMW", cpdb.xmwt[k]);
-			hitMol.setProp<double>("tPSA", cpdb.tpsa[k]);
-			hitMol.setProp<double>("clogP", cpdb.clgp[k]);*/
+			hitMol.setProp<unsigned int>("numAtoms", cpdb['natm.u16'][k]);
+			hitMol.setProp<unsigned int>("numHBD", cpdb['nhbd.u16'][k]);
+			hitMol.setProp<unsigned int>("numHBA", cpdb['nhba.u16'][k]);
+			hitMol.setProp<unsigned int>("numRotatableBonds", cpdb['nrtb.u16'][k]); // cpdb['nrtb.u16'][k] was precalculated from SMILES before adding hydrogens. Adding hydrogens may lead to more rotatable bonds. As a result, cpdb['nrtb.u16'][k] == calcNumRotatableBonds(hitMolNoH) <= calcNumRotatableBonds(hitMol)
+			hitMol.setProp<unsigned int>("numRings", cpdb['nrng.u16'][k]);
+			hitMol.setProp<double>("exactMW", cpdb['xmwt.f32'][k]);
+			hitMol.setProp<double>("tPSA", cpdb['tpsa.f32'][k]);
+			hitMol.setProp<double>("clogP", cpdb['clgp.f32'][k]);*/
 
 			// Find heavy atoms.
 			const matchVect = JSON.parse(hitMol.get_substruct_matches(SubsetMols[0]));
