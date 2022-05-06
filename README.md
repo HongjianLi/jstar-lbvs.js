@@ -14,6 +14,9 @@ A C++ implementation is available at https://github.com/HongjianLi/jstar-lbvs.cp
 * [MongoDB]
 ### Daemon
 * [MongoDB Node.js Driver]
+* [rdkit]
+* [piscina]
+* [commander]
 
 ## License
 [MIT License]
@@ -28,5 +31,8 @@ A C++ implementation is available at https://github.com/HongjianLi/jstar-lbvs.cp
 [jstar]: https://github.com/HongjianLi/jstar
 [MongoDB]: https://github.com/mongodb/mongo
 [MongoDB Node.js Driver]: https://mongodb.github.io/node-mongodb-native
+[rdkit]: https://github.com/rdkit/rdkit/tree/master/Code/MinimalLib
+[piscina]: https://github.com/piscinajs/piscina
+[commander]: https://github.com/tj/commander.js
 [MIT License]: https://github.com/HongjianLi/jstar-lbvs.js/blob/master/LICENSE
 [Jacky Lee]: https://github.com/HongjianLi
