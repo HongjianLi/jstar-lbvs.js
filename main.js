@@ -341,8 +341,8 @@ while (true) {
 			return scores[val0] - scores[val1];
 		});
 
-		// Write hit molecules to a string stream for output.
-		console.log(`${local_time_string()} Writing hit molecules to a string stream`);
+		// Write hit molecules to a string for output.
+		console.log(`${local_time_string()} Writing hit molecules to a string`);
 		let hitMolSdfPerQry = '';
 		for (let l = 0; l < num_hits; ++l) {
 			// Obtain indexes to the hit compound and the hit conformer.
@@ -413,7 +413,7 @@ while (true) {
 			// Write the aligned hit conformer.
 			hitMolSdfPerQry += hitMol.get_molblock() + '$$$$\n'; // .get_molblock() does not return the trailing $$$$ line.
 		}
-		console.log(`${local_time_string()} Wrote ${hitMolSdfPerQry.length} bytes of hit molecules to a string stream`);
+		console.log(`${local_time_string()} Wrote ${hitMolSdfPerQry.length} bytes of hit molecules to a string`);
 
 		// If the size of the hitMolSdf field will not exceed 15MB after appending, then allow the appending. Reserve 1MB for the other fields, e.g. qryMolSdf.
 		if (hitMolSdf.length + hitMolSdfPerQry.length < 15000000) {
