@@ -8,11 +8,7 @@ import local_time_string from './utility.js';
  */
 class compound_database {
 	static get descriptors() {
-		return {
-			u16: ['natm', 'nhbd', 'nhba', 'nrtb', 'nrng'],
-			f32: ['xmwt', 'tpsa', 'clgp', 'usrcat'],
-			u64: ['conformers.sdf.ftr'],
-		};
+		return ['natm.u16', 'nhbd.u16', 'nhba.u16', 'nrtb.u16', 'nrng.u16', 'xmwt.f32', 'tpsa.f32', 'clgp.f32', 'usrcat.f32', 'conformers.sdf.ftr.u64'];
 	}
 	/**
 	 * compound_database::compound_database(const path dpth)
@@ -36,34 +32,29 @@ class compound_database {
 		console.log(`${local_time_string()} Reading ${this.name}`);
 
 		// Read molecular descriptor files.
-		const { u16, f32, u64 } = compound_database.descriptors;
-		for (let k = 0; k < u16.length; ++k) {
-			const key = u16[k];
-			const filename = `${key}.u16`;
+		const { descriptors } = compound_database;
+		for (let k = 0; k < descriptors.length; ++k) {
+			const filename = descriptors[k];
 			const buf = await fs.readFile(path.join(this.dpth, filename));
 			console.log(`${local_time_string()} Read ${buf.length} bytes from ${filename}`);
-			this[key] = new Uint16Array(buf.buffer, 0, buf.length / Uint16Array.BYTES_PER_ELEMENT);
+			switch (filename.slice(-3)) {
+				case 'u16':
+					this[filename] = new Uint16Array(buf.buffer, 0, buf.length / Uint16Array.BYTES_PER_ELEMENT);
+					break;
+				case 'f32':
+					this[filename] = new Float32Array(buf.buffer, 0, buf.length / Float32Array.BYTES_PER_ELEMENT);
+					break;
+				case 'u64':
+					this[filename] = new BigUint64Array(buf.buffer, 0, buf.length / BigUint64Array.BYTES_PER_ELEMENT);
+					break;
+			}
 		}
-		for (let k = 0; k < f32.length; ++k) {
-			const key = f32[k];
-			const filename = `${key}.f32`;
-			const buf = await fs.readFile(path.join(this.dpth, filename));
-			console.log(`${local_time_string()} Read ${buf.length} bytes from ${filename}`);
-			this[key] = new Float32Array(buf.buffer, 0, buf.length / Float32Array.BYTES_PER_ELEMENT);
-		}
-		for (let k = 0; k < u64.length; ++k) {
-			const key = u64[k];
-			const filename = `${key}.u64`;
-			const buf = await fs.readFile(path.join(this.dpth, filename));
-			console.log(`${local_time_string()} Read ${buf.length} bytes from ${filename}`);
-			this[key] = new BigUint64Array(buf.buffer, 0, buf.length / BigUint64Array.BYTES_PER_ELEMENT);
-		}
-		this.num_compounds = this[u16[0]].length;
-		u16.slice(1).concat(f32.slice(0, -1)).forEach(key => {
-			console.assert(this[key].length === this.num_compounds);
+		this.num_compounds = this[descriptors[0]].length;
+		descriptors.slice(1, -2).forEach(filename => { // except 'usrcat.f32' and 'conformers.sdf.ftr.u64'
+			console.assert(this[filename].length === this.num_compounds);
 		});
-		this.num_conformers = this['conformers.sdf.ftr'].length;
-		console.assert(this.num_conformers === this.usrcat.length / 60);
+		this.num_conformers = this['conformers.sdf.ftr.u64'].length;
+		console.assert(this.num_conformers === this['usrcat.f32'].length / 60);
 		console.assert(this.num_conformers === this.num_compounds << 2);
 		console.log(`${local_time_string()} Found ${this.num_compounds} compounds and ${this.num_conformers} conformers`);
 
@@ -74,11 +65,11 @@ class compound_database {
 	/**
 	 * Read the ith conformer out of conformers.sdf
 	 * string compound_database::read_conformer(const size_t index, ifstream& ifs) const
-	 * @param {*} index 
+	 * @param {number} index - Index of the conformer to read.
 	 */
 	async read_conformer(index) {
-		const position = index ? this['conformers.sdf.ftr'][index - 1] : 0n;
-		const length = parseInt(this['conformers.sdf.ftr'][index] - position);
+		const position = index ? this['conformers.sdf.ftr.u64'][index - 1] : 0n;
+		const length = parseInt(this['conformers.sdf.ftr.u64'][index] - position);
 		const buffer = Buffer.alloc(length);
 		const { bytesRead } = await readPromisied(this['conformers.sdf'].fd, { buffer, position }); // fs.read(fd[, options], callback) supports position <bigint>. https://nodejs.org/api/fs.html#fsreadfd-options-callback
 		console.assert(bytesRead === length);

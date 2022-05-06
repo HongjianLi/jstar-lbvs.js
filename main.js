@@ -199,6 +199,7 @@ while (true) {
 	// Obtain a constant reference to the selected database.
 	console.log(`${local_time_string()} Finding the selected compound database`);
 	const cpdb = databases.find(cpdb => cpdb.name === cpdb_name);
+	const usrcat = cpdb['usrcat.f32'];
 
 	// Read the user-supplied SDF file.
 	console.log(`${local_time_string()} Reading the query file`);
@@ -331,7 +332,7 @@ while (true) {
 		console.log(`${local_time_string()} Screening ${cpdb.name} and calculating ${cpdb.num_compounds} ${usr_names[usr0]} scores from ${cpdb.num_conformers} conformers`);
 		scores.fill(Infinity);
 		await Promise.all([...Array(num_chunks).keys()].map(l => {
-			return piscina.run({ chunk_size, l, num_compounds: cpdb.num_compounds, scores, usrcat: cpdb.usrcat, qnu0, q, cnfids, zcase, num_hits }, { name: 'calculate' });
+			return piscina.run({ chunk_size, l, num_compounds: cpdb.num_compounds, scores, usrcat, qnu0, q, cnfids, zcase, num_hits }, { name: 'calculate' });
 		}));
 
 		// Sort the top hits from chunks.
@@ -349,10 +350,10 @@ while (true) {
 			const j = cnfids[k];
 
 			// Calculate the secondary score of the saved conformer, which has the best primary score.
-			const d = cpdb.usrcat.slice(60 * j, 60 * (j + 1));
+			const o = 60 * j;
 			let s = 0;
 			for (let i = 0; i < qnu1; ++i) {
-				s += Math.abs(q[i] - d[i]);
+				s += Math.abs(q[i] - usrcat[o + i]);
 			}
 			const u0score = 1 / (1 + scores[k] * qv[usr0]); // Primary score of the current compound.
 			const u1score = 1 / (1 + s * qv[usr1]); // Secondary score of the current compound.
@@ -369,7 +370,7 @@ while (true) {
 			const hitFp = hitMol.get_morgan_fp();
 
 			// Calculate Tanimoto similarity.
-//				const ts = TanimotoSimilarity(qryFp, hitFp);
+//			const ts = TanimotoSimilarity(qryFp, hitFp);
 
 			// Remove hydrogens to calculate canonical SMILES and descriptors.
 			const hitMolNoH = hitMol.remove_hs();
