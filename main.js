@@ -394,10 +394,10 @@ while (true) {
 
 			// Calculate a 3D transform from the four reference points of the hit conformer to those of the query compound.
 //			Transform3D trans;
-//			AlignPoints(qryRefPoints, hitRefPoints, trans); // https://www.rdkit.org/docs/cppapi/AlignPoints_8h.html
+//			AlignPoints(qryRefPoints, hitRefPoints, trans); // rdkit-2020.03.6/Code/Numerics/Alignment/AlignPoints.cpp
 
 			// Apply the 3D transform to all atoms of the hit conformer.
-//			transformConformer(hitCnf, trans); // https://www.rdkit.org/docs/cppapi/namespaceMolTransforms.html#a402ff7ec7f1aa9624f20e6f80601ef7f
+//			transformConformer(hitCnf, trans); // rdkit-2020.03.6/Code/GraphMol/MolTransforms/MolTransforms.cpp
 
 			// Write the aligned hit conformer.
 			hitMolSdfPerQry += hitMol.get_molblock() + '$$$$\n'; // .get_molblock() does not return the trailing $$$$ line.
