@@ -175,7 +175,7 @@ while (true) {
 	// Obtain job properties.
 	const _id = jobid_view["_id"];
 	console.log(`${local_time_string()} Executing job ${_id}`);
-	const qry_mol_sdf = jobid_view["qryMolSdf"];
+	const qryMolSdf = jobid_view["qryMolSdf"];
 	const cpdb_name = jobid_view["database"];
 	const score = jobid_view["score"];
 	console.assert(usr_names.includes(score));
@@ -191,6 +191,7 @@ while (true) {
 
 	// Read the user-supplied SDF file.
 	console.log(`${local_time_string()} Reading the query file`);
+	const qrySdfArr = qryMolSdf.split(/\$\$\$\$\r?\n/).filter(s => s.length).map(s => s + '$$$$\n');
 
 	// Initialize vectors to store compounds' primary score and their corresponding conformer.
 	/**
@@ -220,11 +221,11 @@ while (true) {
 
 	// Process each of the query compounds sequentially.
 	let hitMolSdf = '';
-	const num_qry_mols = 1; // num_qry_mols is the number of query molecules submitted by the user. These query molecules are not necessarily all processed, given the limitation of maximum 16MB MongoDB document size of the result.
+	const num_qry_mols = qrySdfArr.length; // num_qry_mols is the number of query molecules submitted by the user. These query molecules are not necessarily all processed, given the limitation of maximum 16MB MongoDB document size of the result.
 	let query_number = 0;
 	while (query_number < num_qry_mols) {
 		console.log(`${local_time_string()} Parsing query compound ${query_number}`);
-		const qryMol = rdkit.get_mol(qry_mol_sdf); // get_mol has a different implementation from C++ SDMolSupplier(sanitize=true, removeHs=true, strictParsing=true). So the Mol object returned by get_mol is not totally identical to the ROMol instance returned by SDMolSupplier.next(), thus they do not return identical Morgan fingerprints. https://github.com/rdkit/rdkit/blob/master/Code/MinimalLib/common.h#L89
+		const qryMol = rdkit.get_mol(qrySdfArr[query_number]); // get_mol has a different implementation from C++ SDMolSupplier(sanitize=true, removeHs=true, strictParsing=true). So the Mol object returned by get_mol is not totally identical to the ROMol instance returned by SDMolSupplier.next(), thus they do not return identical Morgan fingerprints. https://github.com/rdkit/rdkit/blob/master/Code/MinimalLib/common.h#L89
 		const qryCnf = JSON.parse(qryMol.get_json()).molecules[0].conformers[0].coords;
 		const qryDes = JSON.parse(qryMol.get_descriptors());
 
@@ -339,10 +340,10 @@ while (true) {
 			const u1score = 1 / (1 + s * qv[usr1]); // Secondary score of the current compound.
 
 			// Read SDF content of the hit conformer.
-			const hitMolBlock = await cpdb.read_conformer(j);
+			const hitSdf = await cpdb.read_conformer(j);
 
 			// Construct a RDKit ROMol object.
-			const hitMol = rdkit.get_mol(hitMolBlock);
+			const hitMol = rdkit.get_mol(hitSdf);
 			const hitCnf = JSON.parse(hitMol.get_json()).molecules[0].conformers[0].coords;
 			const hitDes = JSON.parse(hitMol.get_descriptors());
 
