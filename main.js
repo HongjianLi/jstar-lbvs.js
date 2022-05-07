@@ -101,7 +101,7 @@ const num_hits = 100;
 
 // Wrap SMARTS strings to Mol objects.
 const rdkit = await initRDKitModule();
-const SubsetMols = SubsetSMARTS.map(smarts => rdkit.get_qmol(smarts));
+const SubsetMols = SubsetSMARTS.map(smarts => rdkit.get_qmol(smarts)); // https://github.com/rdkit/rdkit/blob/master/Code/MinimalLib/common.h#L173
 
 // Read compound database directory.
 const databases = await fs.readdir(options.databases).then(subDirs => subDirs.map(subDir => new compound_database(path.join(options.databases, subDir))));
@@ -394,10 +394,10 @@ while (true) {
 
 			// Calculate a 3D transform from the four reference points of the hit conformer to those of the query compound.
 //			Transform3D trans;
-//			AlignPoints(qryRefPoints, hitRefPoints, trans);
+//			AlignPoints(qryRefPoints, hitRefPoints, trans); // https://www.rdkit.org/docs/cppapi/AlignPoints_8h.html
 
 			// Apply the 3D transform to all atoms of the hit conformer.
-//			transformConformer(hitCnf, trans);
+//			transformConformer(hitCnf, trans); // https://www.rdkit.org/docs/cppapi/namespaceMolTransforms.html#a402ff7ec7f1aa9624f20e6f80601ef7f
 
 			// Write the aligned hit conformer.
 			hitMolSdfPerQry += hitMol.get_molblock() + '$$$$\n'; // .get_molblock() does not return the trailing $$$$ line.
