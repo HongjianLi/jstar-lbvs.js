@@ -9,6 +9,9 @@
 		"url": "https://github.com/HongjianLi/jstar-lbvs.js"
 	},
 	"license": "MIT",
+	"engines": {
+		"node": ">=16.15.0"
+	},
 	"dependencies": {
 		"@rdkit/rdkit": "^2022.3.2",
 		"commander": "^9.2.0",
