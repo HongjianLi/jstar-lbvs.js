@@ -5,7 +5,7 @@ import { program } from 'commander';
 import { MongoClient } from "mongodb";
 import initRDKitModule from '@rdkit/rdkit';
 import { Piscina } from 'piscina';
-import { compound_database } from './compound_database.js';
+import { CompoundDatabase } from './CompoundDatabase.js';
 import local_time_string from './utility.js';
 
 /**
@@ -104,7 +104,7 @@ const rdkit = await initRDKitModule();
 const SubsetMols = SubsetSMARTS.map(smarts => rdkit.get_qmol(smarts)); // https://github.com/rdkit/rdkit/blob/master/Code/MinimalLib/common.h#L173
 
 // Read compound database directory.
-const databases = await fs.readdir(options.databases).then(subDirs => subDirs.map(subDir => new compound_database(path.join(options.databases, subDir))));
+const databases = await fs.readdir(options.databases).then(subDirs => subDirs.map(subDir => new CompoundDatabase(path.join(options.databases, subDir))));
 for (let k = 0; k < databases.length; ++k) { await databases[k].read_descriptors(); }
 
 // Connect to mongodb and authenticate user.

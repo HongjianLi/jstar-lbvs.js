@@ -6,7 +6,7 @@ import local_time_string from './utility.js';
 /**
  * Represents a compound database.
  */
-class compound_database {
+class CompoundDatabase {
 	/**
 	 * @returns {Array<string>} Descriptor files.
 	 */
@@ -29,7 +29,7 @@ class compound_database {
 		console.log(`${local_time_string()} Reading ${this.name}`);
 
 		// Read molecular descriptor files.
-		const { descriptors } = compound_database;
+		const { descriptors } = CompoundDatabase;
 		for (let k = 0; k < descriptors.length; ++k) {
 			const filename = descriptors[k];
 			const buf = await fs.readFile(path.join(this.dpth, filename));
@@ -78,4 +78,4 @@ class compound_database {
 
 const readPromisied = util.promisify(read); // Convert the callback style of fs.read to the promise style.
 
-export { compound_database };
+export { CompoundDatabase };
