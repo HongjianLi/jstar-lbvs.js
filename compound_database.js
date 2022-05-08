@@ -44,6 +44,8 @@ class compound_database {
 				case 'u64':
 					this[filename] = new BigUint64Array(buf.buffer, 0, buf.length / BigUint64Array.BYTES_PER_ELEMENT);
 					break;
+				default:
+					console.error(`Unsupported descriptor file extension: ${filename}`);
 			}
 		}
 		this.num_compounds = this[descriptors[0]].length;
