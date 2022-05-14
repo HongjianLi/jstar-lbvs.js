@@ -7,6 +7,7 @@ import initRDKitModule from '@rdkit/rdkit';
 import { Piscina } from 'piscina';
 import { CompoundDatabase } from './CompoundDatabase.js';
 import local_time_string from './utility.js';
+import AlignPoints from './AlignPoints.js';
 
 /**
  * Calculate the square distance between two points.
@@ -363,7 +364,7 @@ while (true) {
 			const ts = bothFpNumOnBits / (qryFpNumOnBits + hitFpNumOnBits - bothFpNumOnBits);
 
 			// Remove hydrogens to calculate canonical SMILES and descriptors.
-			const hitMolNoH = hitMol.remove_hs();
+			const hitMolNoH = rdkit.get_mol(hitMol.remove_hs());
 
 /*			// Calculate canonical SMILES, molecular formula and descriptors. This can be done either by calculating them on the fly using the molecule with hydrogens removed, or by reading the precalculated values from *.u16 and *.f32 files.
 			hitMol.setProp<unsigned int>("query", query_number);
@@ -371,16 +372,16 @@ while (true) {
 			hitMol.setProp<double>("usrcatScore", usr1 ? u1score : u0score);
 			hitMol.setProp<double>("tanimotoScore", ts);
 			hitMol.setProp<string>("database", cpdb.name);
-			hitMol.setProp<string>("canonicalSMILES", MolToSmiles(hitMolNoH)); // Default parameters are: const ROMol& mol, bool doIsomericSmiles = true, bool doKekule = false, int rootedAtAtom = -1, bool canonical = true, bool allBondsExplicit = false, bool allHsExplicit = false, bool doRandom = false. https://www.rdkit.org/docs/cppapi/namespaceRDKit.html#a3636828cca83a233d7816f3652a9eb6b
+			hitMol.setProp<string>("canonicalSMILES", hitMolNoH.get_smiles()); // Default parameters are: const ROMol& mol, bool doIsomericSmiles = true, bool doKekule = false, int rootedAtAtom = -1, bool canonical = true, bool allBondsExplicit = false, bool allHsExplicit = false, bool doRandom = false. https://www.rdkit.org/docs/cppapi/namespaceRDKit.html#a3636828cca83a233d7816f3652a9eb6b
 			hitMol.setProp<string>("molFormula", calcMolFormula(hitMol)); // Calculate hydrogens in the molecular formula.
-			hitMol.setProp<unsigned int>("numAtoms", cpdb['natm.u16'][k]);
-			hitMol.setProp<unsigned int>("numHBD", cpdb['nhbd.u16'][k]);
-			hitMol.setProp<unsigned int>("numHBA", cpdb['nhba.u16'][k]);
-			hitMol.setProp<unsigned int>("numRotatableBonds", cpdb['nrtb.u16'][k]); // cpdb['nrtb.u16'][k] was precalculated from SMILES before adding hydrogens. Adding hydrogens may lead to more rotatable bonds. As a result, cpdb['nrtb.u16'][k] == calcNumRotatableBonds(hitMolNoH) <= calcNumRotatableBonds(hitMol)
-			hitMol.setProp<unsigned int>("numRings", cpdb['nrng.u16'][k]);
-			hitMol.setProp<double>("exactMW", cpdb['xmwt.f32'][k]);
-			hitMol.setProp<double>("tPSA", cpdb['tpsa.f32'][k]);
-			hitMol.setProp<double>("clogP", cpdb['clgp.f32'][k]);*/
+			hitMol.setProp<unsigned int>("numAtoms", cpdb['natm.u16'][k]); // hitDes.NumHeavyAtoms
+			hitMol.setProp<unsigned int>("numHBD", cpdb['nhbd.u16'][k]); // hitDes.NumHBD
+			hitMol.setProp<unsigned int>("numHBA", cpdb['nhba.u16'][k]); // hitDes.NumHBA
+			hitMol.setProp<unsigned int>("numRotatableBonds", cpdb['nrtb.u16'][k]); // cpdb['nrtb.u16'][k] was precalculated from SMILES before adding hydrogens. Adding hydrogens may lead to more rotatable bonds. As a result, cpdb['nrtb.u16'][k] == calcNumRotatableBonds(hitMolNoH) <= calcNumRotatableBonds(hitMol) // hitDes.NumRotatableBonds
+			hitMol.setProp<unsigned int>("numRings", cpdb['nrng.u16'][k]); // hitDes.NumRings
+			hitMol.setProp<double>("exactMW", cpdb['xmwt.f32'][k]); // hitDes.exactmw
+			hitMol.setProp<double>("tPSA", cpdb['tpsa.f32'][k]); // hitDes.tpsa
+			hitMol.setProp<double>("clogP", cpdb['clgp.f32'][k]); // hitDes.CrippenClogP */
 
 			// Find heavy atoms.
 			const matchVect = JSON.parse(hitMol.get_substruct_matches(SubsetMols[0]));
@@ -394,14 +395,22 @@ while (true) {
 			const hitRefPoints = calcRefPoints(hitCnf, hitHeavyAtoms);
 
 			// Calculate a 3D transform from the four reference points of the hit conformer to those of the query compound.
-//			Transform3D trans;
-//			AlignPoints(qryRefPoints, hitRefPoints, trans); // rdkit-2020.03.6/Code/Numerics/Alignment/AlignPoints.cpp
+			// Ported from rdkit-2020.03.6/Code/Numerics/Alignment/AlignPoints.cpp
+			const trans = AlignPoints(qryRefPoints, hitRefPoints);
 
 			// Apply the 3D transform to all atoms of the hit conformer.
-//			transformConformer(hitCnf, trans); // rdkit-2020.03.6/Code/GraphMol/MolTransforms/MolTransforms.cpp
+			// Ported from rdkit-2020.03.6/Code/GraphMol/MolTransforms/MolTransforms.cpp
+			hitCnf.forEach(pt => {
+				trans.transformPoint(pt);
+			});
 
 			// Write the aligned hit conformer.
-			hitMolSdfPerQry += hitMol.get_molblock() + '$$$$\n'; // .get_molblock() does not return the trailing $$$$ line.
+			hitMolSdfPerQry += (hitMol.get_molblock() + '$$$$\n').split('\n').map((line, lineIndex) => { // .get_molblock() does not return the trailing $$$$ line.
+				const atomIndex = lineIndex - 4;
+				if (atomIndex < 0 || atomIndex >= hitCnf.length) return line;
+				const point = hitCnf[atomIndex];
+				return point.map(e => e.toFixed(4).padStart(10, ' ')).join('').concat(line.slice(30));
+			}).join('\n');
 		}
 		console.log(`${local_time_string()} Wrote ${hitMolSdfPerQry.length} bytes of hit molecules to a string`);
 
