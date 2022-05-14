@@ -343,7 +343,7 @@ while (true) {
 			// Read SDF content of the hit conformer.
 			const hitSdf = await cpdb.read_conformer(j);
 
-			// Construct a RDKit ROMol object.
+			// Construct a Mol object.
 			const hitMol = rdkit.get_mol(hitSdf);
 			const hitCnf = JSON.parse(hitMol.get_json()).molecules[0].conformers[0].coords;
 			const hitDes = JSON.parse(hitMol.get_descriptors());
@@ -366,23 +366,16 @@ while (true) {
 			// Remove hydrogens to calculate canonical SMILES and descriptors.
 			const hitMolNoH = rdkit.get_mol(hitMol.remove_hs());
 
-/*			// Calculate canonical SMILES, molecular formula and descriptors. This can be done either by calculating them on the fly using the molecule with hydrogens removed, or by reading the precalculated values from *.u16 and *.f32 files.
-			hitMol.setProp<unsigned int>("query", query_number);
-			hitMol.setProp<double>("usrScore", usr1 ? u0score : u1score);
-			hitMol.setProp<double>("usrcatScore", usr1 ? u1score : u0score);
-			hitMol.setProp<double>("tanimotoScore", ts);
-			hitMol.setProp<string>("database", cpdb.name);
-			hitMol.setProp<string>("canonicalSMILES", hitMolNoH.get_smiles()); // Default parameters are: const ROMol& mol, bool doIsomericSmiles = true, bool doKekule = false, int rootedAtAtom = -1, bool canonical = true, bool allBondsExplicit = false, bool allHsExplicit = false, bool doRandom = false. https://www.rdkit.org/docs/cppapi/namespaceRDKit.html#a3636828cca83a233d7816f3652a9eb6b
-			hitMol.setProp<string>("molFormula", calcMolFormula(hitMol)); // Calculate hydrogens in the molecular formula.
-			hitMol.setProp<unsigned int>("numAtoms", cpdb['natm.u16'][k]); // hitDes.NumHeavyAtoms
-			hitMol.setProp<unsigned int>("numHBD", cpdb['nhbd.u16'][k]); // hitDes.NumHBD
-			hitMol.setProp<unsigned int>("numHBA", cpdb['nhba.u16'][k]); // hitDes.NumHBA
-			hitMol.setProp<unsigned int>("numRotatableBonds", cpdb['nrtb.u16'][k]); // cpdb['nrtb.u16'][k] was precalculated from SMILES before adding hydrogens. Adding hydrogens may lead to more rotatable bonds. As a result, cpdb['nrtb.u16'][k] == calcNumRotatableBonds(hitMolNoH) <= calcNumRotatableBonds(hitMol) // hitDes.NumRotatableBonds
-			hitMol.setProp<unsigned int>("numRings", cpdb['nrng.u16'][k]); // hitDes.NumRings
-			hitMol.setProp<double>("exactMW", cpdb['xmwt.f32'][k]); // hitDes.exactmw
-			hitMol.setProp<double>("tPSA", cpdb['tpsa.f32'][k]); // hitDes.tpsa
-			hitMol.setProp<double>("clogP", cpdb['clgp.f32'][k]); // hitDes.CrippenClogP */
-
+			// Calculate canonical SMILES, molecular formula and descriptors. This can be done either by calculating them on the fly using the molecule with hydrogens removed, or by reading the precalculated values from *.u16 and *.f32 files.
+			console.assert(cpdb['natm.u16'][k] === hitDes.NumHeavyAtoms);
+			console.assert(cpdb['nhbd.u16'][k] === hitDes.NumHBD);
+			console.assert(cpdb['nhba.u16'][k] <= hitDes.NumHBA); // nhba.u16 was created from setting removeHs=true (which is the default setting), leading to fewer hydrogen bond acceptors being matched.
+			console.assert(cpdb['nrtb.u16'][k] <= hitDes.NumRotatableBonds); // cpdb['nrtb.u16'][k] was precalculated from SMILES before adding hydrogens. Adding hydrogens may lead to more rotatable bonds. As a result, cpdb['nrtb.u16'][k] === calcNumRotatableBonds(hitMolNoH) <= calcNumRotatableBonds(hitMol)
+			console.assert(cpdb['nrng.u16'][k] === hitDes.NumRings);
+			console.assert(Math.abs(cpdb['xmwt.f32'][k] - hitDes.exactmw) < 1e-2, `xmwt ${cpdb['xmwt.f32'][k]} ${hitDes.exactmw}`);
+			console.assert(Math.abs(cpdb['tpsa.f32'][k] - hitDes.tpsa) < 1e-2, `tpsa ${cpdb['tpsa.f32'][k]} ${hitDes.tpsa}`);
+			console.assert(Math.abs(cpdb['clgp.f32'][k] - hitDes.CrippenClogP) < 1e-2, `clgp ${cpdb['clgp.f32'][k]} ${hitDes.CrippenClogP}`);
+			
 			// Find heavy atoms.
 			const matchVect = JSON.parse(hitMol.get_substruct_matches(SubsetMols[0]));
 			const hitHeavyAtoms = matchVect.map(m => m.atoms[0]);
@@ -405,12 +398,20 @@ while (true) {
 			});
 
 			// Write the aligned hit conformer.
-			hitMolSdfPerQry += (hitMol.get_molblock() + '$$$$\n').split('\n').map((line, lineIndex) => { // .get_molblock() does not return the trailing $$$$ line.
+			// The Mol object does not have a setProp<>() function as in the C++ ROMol class. So manually construct the properties, except molFormula which is to be implemented.
+			hitMolSdfPerQry += hitMol.get_molblock().split('\n').slice(0, -1).map((line, lineIndex) => { // .get_molblock() does not return the trailing $$$$ line. Use .slice(0, -1) to filter out the last empty line.
 				const atomIndex = lineIndex - 4;
 				if (atomIndex < 0 || atomIndex >= hitCnf.length) return line;
 				const point = hitCnf[atomIndex];
 				return point.map(e => e.toFixed(4).padStart(10, ' ')).join('').concat(line.slice(30));
-			}).join('\n');
+			}).concat([{ key: 'query', value: query_number }, { key: 'usrScore', value: usr1 ? u0score : u1score }, { key: 'usrcatScore', value: usr1 ? u1score : u0score }, { key: 'tanimotoScore', value: ts }, { key: 'database', value: cpdb.name }, { key: 'canonicalSMILES', value: hitMolNoH.get_smiles() }, { key: 'molFormula', value: '' }, { key: 'numAtoms', value: cpdb['natm.u16'][k] }, { key: 'numHBD', value: cpdb['nhbd.u16'][k] }, { key: 'numHBA', value: cpdb['nhba.u16'][k] }, { key: 'numRotatableBonds', value: cpdb['nrtb.u16'][k] }, { key: 'numRings', value: cpdb['nrng.u16'][k] }, { key: 'exactMW', value: cpdb['xmwt.f32'][k] }, { key: 'tPSA', value: cpdb['tpsa.f32'][k] }, { key: 'clogP', value: cpdb['clgp.f32'][k] }].map(kv => {
+				const { key, value } = kv;
+				return [
+					`>  <${key}>  (${1 + l}) `,
+					value,
+					'',
+				].join('\n');
+			})).concat(['$$$$', '']).join('\n');
 		}
 		console.log(`${local_time_string()} Wrote ${hitMolSdfPerQry.length} bytes of hit molecules to a string`);
 
