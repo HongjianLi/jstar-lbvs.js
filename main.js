@@ -69,6 +69,26 @@ function calcRefPoints(conf, heavyAtoms) {
 	return [ ctd, cst, fct, ftf ];
 }
 
+
+/**
+ * The original implementation rdkit-2020.03.6\Code\GraphMol\Descriptors\MolDescriptors.cpp looks complicated.
+ * @param {string} molblock 
+ * @returns {string} Molecular formula.
+ */
+function calcMolFormula(molblock) {
+	const lines = molblock.split('\n');
+	const numAtoms = parseInt(lines[3].slice(0, 4));
+	const elementCount = {};
+	lines.slice(4, 4 + numAtoms).map(line => line.slice(31, line[32] === ' ' ? 32 : 33)).forEach(element => {
+		if (elementCount[element] === undefined) {
+			elementCount[element] = 1;
+		} else {
+			++elementCount[element];
+		}
+	});
+	return Object.keys(elementCount).sort().map(element => `${element}${elementCount[element] === 1 ? '' : elementCount[element]}`).join('');
+}
+
 // Process program options.
 const options = program
 	.name('jstar-lbvs.js')
@@ -404,7 +424,7 @@ while (true) {
 				if (atomIndex < 0 || atomIndex >= hitCnf.length) return line;
 				const point = hitCnf[atomIndex];
 				return point.map(e => e.toFixed(4).padStart(10, ' ')).join('').concat(line.slice(30));
-			}).concat([{ key: 'query', value: query_number }, { key: 'usrScore', value: usr1 ? u0score : u1score }, { key: 'usrcatScore', value: usr1 ? u1score : u0score }, { key: 'tanimotoScore', value: ts }, { key: 'database', value: cpdb.name }, { key: 'canonicalSMILES', value: hitMolNoH.get_smiles() }, { key: 'molFormula', value: '' }, { key: 'numAtoms', value: cpdb['natm.u16'][k] }, { key: 'numHBD', value: cpdb['nhbd.u16'][k] }, { key: 'numHBA', value: cpdb['nhba.u16'][k] }, { key: 'numRotatableBonds', value: cpdb['nrtb.u16'][k] }, { key: 'numRings', value: cpdb['nrng.u16'][k] }, { key: 'exactMW', value: cpdb['xmwt.f32'][k] }, { key: 'tPSA', value: cpdb['tpsa.f32'][k] }, { key: 'clogP', value: cpdb['clgp.f32'][k] }].map(kv => {
+			}).concat([{ key: 'query', value: query_number }, { key: 'usrScore', value: usr1 ? u0score : u1score }, { key: 'usrcatScore', value: usr1 ? u1score : u0score }, { key: 'tanimotoScore', value: ts }, { key: 'database', value: cpdb.name }, { key: 'canonicalSMILES', value: hitMolNoH.get_smiles() }, { key: 'molFormula', value: calcMolFormula(hitMol.get_molblock()) }, { key: 'numAtoms', value: cpdb['natm.u16'][k] }, { key: 'numHBD', value: cpdb['nhbd.u16'][k] }, { key: 'numHBA', value: cpdb['nhba.u16'][k] }, { key: 'numRotatableBonds', value: cpdb['nrtb.u16'][k] }, { key: 'numRings', value: cpdb['nrng.u16'][k] }, { key: 'exactMW', value: cpdb['xmwt.f32'][k] }, { key: 'tPSA', value: cpdb['tpsa.f32'][k] }, { key: 'clogP', value: cpdb['clgp.f32'][k] }].map(kv => {
 				const { key, value } = kv;
 				return [
 					`>  <${key}>  (${1 + l}) `,
