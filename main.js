@@ -432,7 +432,10 @@ while (true) {
 					'',
 				].join('\n');
 			})).concat(['$$$$', '']).join('\n');
+			hitMolNoH.delete(); // Calling .delete() is essential for avoiding RuntimeError: Aborted(OOM). Out of memory.
+			hitMol.delete();
 		}
+		qryMol.delete();
 		console.log(`${local_time_string()} Wrote ${hitMolSdfPerQry.length} bytes of hit molecules to a string`);
 
 		// If the size of the hitMolSdf field will not exceed 15MB after appending, then allow the appending. Reserve 1MB for the other fields, e.g. qryMolSdf.
@@ -471,3 +474,5 @@ while (true) {
 	console.log(`${local_time_string()} Screening speed was ${speed.toFixed(0)} conformers per second`);
 }
 await mongoClient.close();
+piscina.destroy();
+SubsetMols.forEach(mol => mol.delete());
