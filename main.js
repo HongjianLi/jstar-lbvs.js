@@ -246,7 +246,7 @@ while (true) {
 	let query_number = 0;
 	while (query_number < num_qry_mols) {
 		console.log(`${local_time_string()} Parsing query compound ${query_number}`);
-		const qryMol = rdkit.get_mol(qrySdfArr[query_number]); // get_mol has a different implementation from C++ SDMolSupplier(sanitize=true, removeHs=true, strictParsing=true). So the Mol object returned by get_mol is not totally identical to the ROMol instance returned by SDMolSupplier.next(), thus they do not return identical Morgan fingerprints. https://github.com/rdkit/rdkit/blob/master/Code/MinimalLib/common.h#L89
+		const qryMol = rdkit.get_mol(qrySdfArr[query_number], JSON.stringify({ sanitize: true, removeHs: false, strictParsing: true })); // get_mol has a different implementation from C++ SDMolSupplier(sanitize=true, removeHs=true, strictParsing=true). So the Mol object returned by get_mol is not totally identical to the ROMol instance returned by SDMolSupplier.next(), thus they do not return identical Morgan fingerprints. https://github.com/rdkit/rdkit/blob/master/Code/MinimalLib/common.h#L89
 		const qryCnf = JSON.parse(qryMol.get_json()).molecules[0].conformers[0].coords;
 		const qryDes = JSON.parse(qryMol.get_descriptors());
 
@@ -364,7 +364,7 @@ while (true) {
 			const hitSdf = await cpdb.read_conformer(j);
 
 			// Construct a Mol object.
-			const hitMol = rdkit.get_mol(hitSdf);
+			const hitMol = rdkit.get_mol(hitSdf, JSON.stringify({ sanitize: true, removeHs: false, strictParsing: true }));
 			const hitCnf = JSON.parse(hitMol.get_json()).molecules[0].conformers[0].coords;
 			const hitDes = JSON.parse(hitMol.get_descriptors());
 
