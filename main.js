@@ -182,7 +182,7 @@ while (true) {
 	// Fetch an incompleted job in a first-come-first-served manner.
 	if (!sleeping) console.log(`${local_time_string()} Fetching an incompleted job`);
 	const startDate = new Date();
-	const jobid_document = await coll.findOneAndUpdate(jobid_filter, { $set: { startDate } }, jobid_foau_options); // https://mongodb.github.io/node-mongodb-native/4.5/classes/Collection.html#findOneAndUpdate
+	const jobid_document = await coll.findOneAndUpdate(jobid_filter, { $set: { daemon: 'js', startDate } }, jobid_foau_options); // https://mongodb.github.io/node-mongodb-native/4.5/classes/Collection.html#findOneAndUpdate
 	if (!jobid_document.value) {
 		// No incompleted jobs. Sleep for a while.
 		if (!sleeping) console.log(`${local_time_string()} Sleeping`);
