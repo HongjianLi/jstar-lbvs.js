@@ -130,7 +130,7 @@ for (let k = 0; k < databases.length; ++k) { await databases[k].read_descriptors
 
 // Connect to mongodb and authenticate user.
 console.log(`${local_time_string()} Connecting to ${options.host}:${options.port} and authenticating ${options.user}`);
-const mongoClient = new MongoClient(`mongodb://${options.host}:${options.port}/?authSource=jstar&maxPoolSize=3`); // https://www.mongodb.com/docs/drivers/node/current/fundamentals/connection/ Always URI encode the username and password using the encodeURIComponent method to ensure they are correctly parsed.
+const mongoClient = new MongoClient(`mongodb://${options.user}:${options.pass}@${options.host}:${options.port}/?authSource=jstar&maxPoolSize=3`); // https://www.mongodb.com/docs/drivers/node/current/fundamentals/connection/ Always URI encode the username and password using the encodeURIComponent method to ensure they are correctly parsed.
 await mongoClient.connect();
 const jstar = mongoClient.db('jstar');
 const coll = jstar.collection('lbvs');
