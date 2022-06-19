@@ -199,6 +199,7 @@ while (true) {
 	const qryMolSdf = jobid_view["qryMolSdf"];
 	const cpdb_name = jobid_view["database"];
 	const score = jobid_view["score"];
+	const descriptors = jobid_view["descriptors"];
 	console.assert(usr_names.includes(score));
 	const usr0 = usr_names.indexOf(score); // Specify the primary sorting score. 0: USR; 1: USRCAT.
 	const usr1 = usr0 ^ 1;
